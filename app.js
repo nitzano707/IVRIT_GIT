@@ -1,8 +1,10 @@
 document.getElementById('transcribe-btn').addEventListener('click', async () => {
     const fileInput = document.getElementById('audio-file');
+    const statusDiv = document.getElementById('status');
     const transcriptionDiv = document.getElementById('transcription');
     const spinner = document.getElementById('spinner');
 
+    statusDiv.innerHTML = '';
     transcriptionDiv.innerHTML = '';
     spinner.style.display = 'block';
 
@@ -31,7 +33,7 @@ document.getElementById('transcribe-btn').addEventListener('click', async () => 
     };
 
     try {
-        const response = await fetch('https://api.runpod.ai/v2/<your-endpoint-key>/run', {
+        const response = await fetch('https://api.runpod.ai/v2/flsha1hfkp14sw/run', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${apiKey}`,
@@ -41,13 +43,13 @@ document.getElementById('transcribe-btn').addEventListener('click', async () => 
         });
 
         const data = await response.json();
-        if (data.status === 'COMPLETED') {
-            displayTranscription(data.output.result.segments);
+        if (data.id) {
+            await checkJobStatus(data.id, apiKey);
         } else {
-            transcriptionDiv.innerHTML = 'Error processing transcription.';
+            statusDiv.innerHTML = 'Error starting transcription.';
         }
     } catch (error) {
-        transcriptionDiv.innerHTML = 'Error connecting to the API.';
+        statusDiv.innerHTML = 'Error connecting to the API.';
     } finally {
         spinner.style.display = 'none';
     }
@@ -71,6 +73,42 @@ function fileToBase64(file) {
         reader.onerror = error => reject(error);
         reader.readAsDataURL(file);
     });
+}
+
+async function checkJobStatus(jobId, apiKey) {
+    const statusDiv = document.getElementById('status');
+    const transcriptionDiv = document.getElementById('transcription');
+
+    statusDiv.innerHTML = 'Job is in progress...';
+
+    let status = 'IN_QUEUE';
+    while (status === 'IN_QUEUE' || status === 'PROCESSING') {
+        try {
+            const response = await fetch(`https://api.runpod.ai/v2/flsha1hfkp14sw/status/${jobId}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`
+                }
+            });
+
+            const data = await response.json();
+            status = data.status;
+
+            if (status === 'COMPLETED') {
+                displayTranscription(data.output.result.segments);
+                statusDiv.innerHTML = 'Transcription completed successfully!';
+                return;
+            } else if (status === 'FAILED') {
+                statusDiv.innerHTML = 'Job failed. Please try again.';
+                return;
+            }
+        } catch (error) {
+            statusDiv.innerHTML = 'Error checking job status.';
+            return;
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds before retrying
+    }
 }
 
 function displayTranscription(segments) {
