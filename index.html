@@ -1,13 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audio Transcription</title>
+    <title>אפליקציית תמלול</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
+            direction: rtl;
+            text-align: right;
         }
         .container {
             max-width: 600px;
@@ -19,6 +21,12 @@
         .transcription {
             margin-top: 20px;
         }
+        .speaker-1 {
+            color: black;
+        }
+        .speaker-2 {
+            color: blue;
+        }
         .spinner {
             display: none;
             margin-top: 20px;
@@ -29,17 +37,22 @@
             margin-top: 20px;
             color: #555;
         }
+        .download-btn {
+            margin-top: 20px;
+            display: none;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Audio Transcription App</h1>
-        <label for="audio-file">Upload Audio File:</label>
+        <h1>אפליקציית תמלול קבצי שמע</h1>
+        <label for="audio-file">בחר קובץ שמע:</label>
         <input type="file" id="audio-file" class="file-input" accept="audio/*">
-        <button id="transcribe-btn">Transcribe</button>
-        <div class="spinner" id="spinner">Processing your file... Please wait.</div>
+        <button id="transcribe-btn">תמלל</button>
+        <div class="spinner" id="spinner">מעבד את הקובץ... נא להמתין.</div>
         <div class="status" id="status"></div>
         <div class="transcription" id="transcription"></div>
+        <button id="download-btn" class="download-btn">הורד כקובץ Word</button>
     </div>
     <script src="app.js"></script>
 </body>
