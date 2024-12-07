@@ -145,20 +145,23 @@ async function checkJobStatus(jobId, apiKey) {
 function displayTranscription(segments) {
     const transcriptionDiv = document.getElementById('transcription');
     transcriptionDiv.innerHTML = '<h2>תמלול:</h2>';
-    segments.forEach(segment => {
+    
+    segments.forEach((segment, index) => {
         const startTime = formatTime(segment.start);
         const endTime = formatTime(segment.end);
-        const speakerClass = segment.id % 2 === 0 ? 'speaker-2' : 'speaker-1';
-        const speakerText = `
-            <p class="${speakerClass}">
-                <strong>דובר ${segment.id}:</strong> 
+
+        // כל סגמנט ממוספר ומופרד בשורת ריווח
+        const segmentText = `
+            <p>
+                <strong>סגמנט ${index + 1}:</strong> 
                 [${startTime} - ${endTime}] 
                 ${segment.text}
-            </p>`;
-        transcriptionDiv.innerHTML += speakerText;
+            </p><br>`;
+        transcriptionDiv.innerHTML += segmentText;
     });
     console.log('התמלול הוצג בהצלחה.');
 }
+
 
 function formatTime(seconds) {
     const date = new Date(0);
