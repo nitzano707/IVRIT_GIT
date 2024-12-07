@@ -3,57 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>אפליקציית תמלול</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            direction: rtl;
-            text-align: right;
-        }
-        .container {
-            max-width: 600px;
-            margin: auto;
-        }
-        .file-input {
-            margin: 20px 0;
-        }
-        .transcription {
-            margin-top: 20px;
-        }
-        .speaker-1 {
-            color: black;
-        }
-        .speaker-2 {
-            color: blue;
-        }
-        .spinner {
-            display: none;
-            margin-top: 20px;
-            font-size: 18px;
-            color: #555;
-        }
-        .status {
-            margin-top: 20px;
-            color: #555;
-        }
-        .download-btn {
-            margin-top: 20px;
-            display: none;
-        }
-    </style>
+    <title>אפליקציית תמלול קובצי שמע</title>
 </head>
 <body>
-    <div class="container">
-        <h1>אפליקציית תמלול קבצי שמע</h1>
-        <label for="audio-file">בחר קובץ שמע:</label>
-        <input type="file" id="audio-file" class="file-input" accept="audio/*">
-        <button id="transcribe-btn">תמלל</button>
-        <div class="spinner" id="spinner">מעבד את הקובץ... נא להמתין.</div>
-        <div class="status" id="status"></div>
-        <div class="transcription" id="transcription"></div>
-        <button id="download-btn" class="download-btn">הורד כקובץ Word</button>
-    </div>
+    <h1>אפליקציית תמלול קובצי שמע</h1>
+    <input type="file" id="audioFile" accept="audio/*">
+    <button id="transcribeButton">תמלל</button>
+    <div id="status"></div>
+    <div id="transcription"></div>
     <script src="app.js"></script>
 </body>
 </html>
