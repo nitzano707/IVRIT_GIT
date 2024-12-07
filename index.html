@@ -22,6 +22,12 @@
         .spinner {
             display: none;
             margin-top: 20px;
+            font-size: 18px;
+            color: #555;
+        }
+        .status {
+            margin-top: 20px;
+            color: #555;
         }
     </style>
 </head>
@@ -31,7 +37,8 @@
         <label for="audio-file">Upload Audio File:</label>
         <input type="file" id="audio-file" class="file-input" accept="audio/*">
         <button id="transcribe-btn">Transcribe</button>
-        <div class="spinner" id="spinner">Processing...</div>
+        <div class="spinner" id="spinner">Processing your file... Please wait.</div>
+        <div class="status" id="status"></div>
         <div class="transcription" id="transcription"></div>
     </div>
     <script src="app.js"></script>
