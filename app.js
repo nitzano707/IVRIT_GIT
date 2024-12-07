@@ -90,12 +90,14 @@ function fileToBase64(file) {
 async function checkJobStatus(jobId, apiKey) {
     const statusDiv = document.getElementById('status');
     const transcriptionDiv = document.getElementById('transcription');
-
     console.log('בודק את מצב העבודה...');
     statusDiv.innerHTML = 'בודק את מצב העבודה...';
 
     let status = 'IN_QUEUE';
-    while (status === 'IN_QUEUE' || status === 'PROCESSING') {
+    let retryCount = 0; // Counter for retries
+    const maxRetries = 30; // Limit retries to avoid infinite loop
+
+    while (status === 'IN_QUEUE' || status === 'IN_PROGRESS') {
         try {
             const response = await fetch(`https://api.runpod.ai/v2/flsha1hfkp14sw/status/${jobId}`, {
                 method: 'GET',
@@ -105,7 +107,7 @@ async function checkJobStatus(jobId, apiKey) {
             });
 
             const data = await response.json();
-            console.log('סטטוס עבודה:', data);
+            console.log(`סטטוס עבודה (נסיון ${retryCount + 1}):`, data);
             status = data.status;
 
             if (status === 'COMPLETED') {
@@ -128,9 +130,17 @@ async function checkJobStatus(jobId, apiKey) {
             return;
         }
 
+        retryCount++;
+        if (retryCount >= maxRetries) {
+            console.error('חצינו את מגבלת הבדיקות. הפסקנו לבדוק.');
+            statusDiv.innerHTML = 'לא הצלחנו לקבל תוצאה לאחר ניסיונות רבים. נסה שוב מאוחר יותר.';
+            return;
+        }
+
         await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds before retrying
     }
 }
+
 
 function displayTranscription(segments) {
     const transcriptionDiv = document.getElementById('transcription');
