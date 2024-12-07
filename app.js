@@ -8,6 +8,9 @@ document.getElementById('transcribe-btn').addEventListener('click', async () => 
     transcriptionDiv.innerHTML = '';
     spinner.style.display = 'block';
 
+    console.log('Starting transcription process...');
+    statusDiv.innerHTML = 'Uploading audio file...';
+
     if (!fileInput.files[0]) {
         alert('Please upload an audio file.');
         spinner.style.display = 'none';
@@ -33,6 +36,8 @@ document.getElementById('transcribe-btn').addEventListener('click', async () => 
     };
 
     try {
+        console.log('Sending transcription request to RunPod...');
+        statusDiv.innerHTML = 'Sending transcription request to RunPod...';
         const response = await fetch('https://api.runpod.ai/v2/flsha1hfkp14sw/run', {
             method: 'POST',
             headers: {
@@ -43,12 +48,17 @@ document.getElementById('transcribe-btn').addEventListener('click', async () => 
         });
 
         const data = await response.json();
+        console.log('Transcription request response:', data);
+
         if (data.id) {
+            console.log('Job ID received:', data.id);
             await checkJobStatus(data.id, apiKey);
         } else {
+            console.error('Error: No job ID received from RunPod.');
             statusDiv.innerHTML = 'Error starting transcription.';
         }
     } catch (error) {
+        console.error('Error connecting to the API:', error);
         statusDiv.innerHTML = 'Error connecting to the API.';
     } finally {
         spinner.style.display = 'none';
@@ -79,7 +89,8 @@ async function checkJobStatus(jobId, apiKey) {
     const statusDiv = document.getElementById('status');
     const transcriptionDiv = document.getElementById('transcription');
 
-    statusDiv.innerHTML = 'Job is in progress...';
+    console.log('Checking job status...');
+    statusDiv.innerHTML = 'Checking job status...';
 
     let status = 'IN_QUEUE';
     while (status === 'IN_QUEUE' || status === 'PROCESSING') {
@@ -92,17 +103,24 @@ async function checkJobStatus(jobId, apiKey) {
             });
 
             const data = await response.json();
+            console.log('Job status response:', data);
             status = data.status;
 
             if (status === 'COMPLETED') {
+                console.log('Job completed. Fetching transcription...');
+                statusDiv.innerHTML = 'Job completed. Fetching transcription...';
                 displayTranscription(data.output.result.segments);
-                statusDiv.innerHTML = 'Transcription completed successfully!';
                 return;
             } else if (status === 'FAILED') {
+                console.error('Job failed.');
                 statusDiv.innerHTML = 'Job failed. Please try again.';
                 return;
             }
+
+            console.log(`Job status: ${status}. Retrying in 5 seconds...`);
+            statusDiv.innerHTML = `Job status: ${status}. Retrying in 5 seconds...`;
         } catch (error) {
+            console.error('Error checking job status:', error);
             statusDiv.innerHTML = 'Error checking job status.';
             return;
         }
@@ -118,4 +136,5 @@ function displayTranscription(segments) {
         const speakerText = `<strong>Speaker ${segment.id}:</strong> ${segment.text}`;
         transcriptionDiv.innerHTML += `<p>${speakerText}</p>`;
     });
+    console.log('Transcription displayed successfully.');
 }
