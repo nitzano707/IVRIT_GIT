@@ -1,110 +1,187 @@
-const API_URL = "https://api.runpod.ai/v2/flsha1hfkp14sw/run";
-const STATUS_URL = "https://api.runpod.ai/v2/flsha1hfkp14sw/status";
-const apiKey = "הכנס-כאן-את-מפתח-ה-API-שלך";
+document.getElementById('transcribe-btn').addEventListener('click', async () => {
+    const fileInput = document.getElementById('audio-file');
+    const statusDiv = document.getElementById('status');
+    const transcriptionDiv = document.getElementById('transcription');
+    const spinner = document.getElementById('spinner');
+    const downloadBtn = document.getElementById('download-btn');
 
-document.getElementById("transcribeButton").addEventListener("click", async () => {
-    const fileInput = document.getElementById("audioInput");
-    const file = fileInput.files[0];
-    if (!file) {
-        alert("אנא בחר קובץ שמע.");
+    statusDiv.innerHTML = '';
+    transcriptionDiv.innerHTML = '';
+    spinner.style.display = 'block';
+    downloadBtn.style.display = 'none';
+
+    console.log('התחלת תהליך התמלול...');
+    statusDiv.innerHTML = 'מעלה את קובץ השמע...';
+
+    if (!fileInput.files[0]) {
+        alert('אנא בחר קובץ שמע.');
+        spinner.style.display = 'none';
         return;
     }
 
-    const statusElement = document.getElementById("status");
-    statusElement.textContent = "ממיר את הקובץ ל-Base64...";
+    const apiKey = getApiKey();
+    if (!apiKey) {
+        alert('אנא הזן מפתח API חוקי.');
+        spinner.style.display = 'none';
+        return;
+    }
+
+    const file = fileInput.files[0];
+    const base64Audio = await fileToBase64(file);
+
+    const payload = {
+        input: {
+            type: 'blob',
+            data: base64Audio,
+            model: 'ivrit-ai/faster-whisper-v2-d4'
+        }
+    };
 
     try {
-        const base64File = await convertToBase64(file);
+        console.log('שולח בקשה ל-RunPod...');
+        statusDiv.innerHTML = 'שולח בקשת תמלול ל-RunPod...';
+        const response = await fetch('https://api.runpod.ai/v2/flsha1hfkp14sw/run', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
 
-        statusElement.textContent = "שולח את הקובץ ל-API...";
-        const jobId = await uploadAndGetJobId(base64File);
+        const data = await response.json();
+        console.log('תגובה התקבלה:', data);
 
-        statusElement.textContent = "מחכה לתוצאות...";
-        const transcription = await waitForResult(jobId);
-
-        statusElement.textContent = "התמלול הסתיים!";
-        displayTranscription(transcription);
+        if (data.id) {
+            console.log('מזהה עבודה התקבל:', data.id);
+            await checkJobStatus(data.id, apiKey);
+        } else {
+            console.error('שגיאה: לא התקבל מזהה עבודה.');
+            statusDiv.innerHTML = 'שגיאה בהתחלת התמלול.';
+        }
     } catch (error) {
-        statusElement.textContent = "שגיאה: " + error.message;
+        console.error('שגיאה בחיבור ל-API:', error);
+        statusDiv.innerHTML = 'שגיאה בחיבור ל-API.';
+    } finally {
+        spinner.style.display = 'none';
     }
 });
 
-async function convertToBase64(file) {
+function getApiKey() {
+    let apiKey = localStorage.getItem('runpodApiKey');
+    if (!apiKey) {
+        apiKey = prompt('אנא הזן את מפתח ה-API שלך:');
+        if (apiKey) {
+            localStorage.setItem('runpodApiKey', apiKey);
+        }
+    }
+    return apiKey;
+}
+
+function fileToBase64(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = error => reject(error);
         reader.readAsDataURL(file);
-        reader.onload = () => {
-            const base64String = reader.result.split(",")[1];
-            resolve(base64String);
-        };
-        reader.onerror = (error) => reject(error);
     });
 }
 
-async function uploadAndGetJobId(base64File) {
-    const payload = {
-        input: {
-            file: base64File,
-            type: "base64",
-            model: "ivrit-ai/faster-whisper-v2-d4",
-        },
-    };
+async function checkJobStatus(jobId, apiKey) {
+    const statusDiv = document.getElementById('status');
+    const transcriptionDiv = document.getElementById('transcription');
+    console.log('בודק את מצב העבודה...');
+    statusDiv.innerHTML = 'בודק את מצב העבודה...';
 
-    const response = await fetch(API_URL, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify(payload),
+    let status = 'IN_QUEUE';
+    let retryCount = 0; // Counter for retries
+    const maxRetries = 30; // Limit retries to avoid infinite loop
+
+    while (status === 'IN_QUEUE' || status === 'IN_PROGRESS') {
+        try {
+            const response = await fetch(`https://api.runpod.ai/v2/flsha1hfkp14sw/status/${jobId}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`
+                }
+            });
+
+            const data = await response.json();
+            console.log(`סטטוס עבודה (נסיון ${retryCount + 1}):`, data);
+            status = data.status;
+
+            if (status === 'COMPLETED') {
+                console.log('העבודה הושלמה. מציג את התמלול...');
+                statusDiv.innerHTML = 'העבודה הושלמה. מציג את התמלול...';
+                displayTranscription(data.output.result.segments);
+                prepareDownload(data.output.result.segments);
+                return;
+            } else if (status === 'FAILED') {
+                console.error('העבודה נכשלה.');
+                statusDiv.innerHTML = 'העבודה נכשלה. אנא נסה שוב.';
+                return;
+            }
+
+            console.log(`סטטוס עבודה: ${status}. בודק שוב בעוד 5 שניות...`);
+            statusDiv.innerHTML = `סטטוס עבודה: ${status}. בודק שוב בעוד 5 שניות...`;
+        } catch (error) {
+            console.error('שגיאה בבדיקת מצב העבודה:', error);
+            statusDiv.innerHTML = 'שגיאה בבדיקת מצב העבודה.';
+            return;
+        }
+
+        retryCount++;
+        if (retryCount >= maxRetries) {
+            console.error('חצינו את מגבלת הבדיקות. הפסקנו לבדוק.');
+            statusDiv.innerHTML = 'לא הצלחנו לקבל תוצאה לאחר ניסיונות רבים. נסה שוב מאוחר יותר.';
+            return;
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds before retrying
+    }
+}
+
+
+function displayTranscription(segments) {
+    const transcriptionDiv = document.getElementById('transcription');
+    transcriptionDiv.innerHTML = '<h2>תמלול:</h2>';
+    
+    segments.forEach((segment, index) => {
+        const startTime = formatTime(segment.start);
+        const endTime = formatTime(segment.end);
+
+        // כל סגמנט ממוספר ומופרד בשורת ריווח
+        const segmentText = `
+            <p>
+                <strong>סגמנט ${index + 1}:</strong> 
+                [${startTime} - ${endTime}] 
+                ${segment.text}
+            </p><br>`;
+        transcriptionDiv.innerHTML += segmentText;
     });
-
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "שגיאה בשליחת הקובץ ל-API");
-    }
-
-    const data = await response.json();
-    return data.id;
+    console.log('התמלול הוצג בהצלחה.');
 }
 
-async function waitForResult(jobId) {
-    const pollingInterval = 5000; // בדיקה כל 5 שניות
-    const maxAttempts = 12; // עד 60 שניות
 
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        const response = await fetch(`${STATUS_URL}/${jobId}`, {
-            headers: {
-                Authorization: `Bearer ${apiKey}`,
-            },
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || "שגיאה בבדיקת סטטוס העבודה");
-        }
-
-        const data = await response.json();
-        if (data.status === "COMPLETED") {
-            return data.output.result;
-        } else if (data.status === "FAILED") {
-            throw new Error("העבודה נכשלה.");
-        }
-
-        await new Promise((resolve) => setTimeout(resolve, pollingInterval));
-    }
-
-    throw new Error("העבודה לא הסתיימה בזמן. נסה שוב מאוחר יותר.");
+function formatTime(seconds) {
+    const date = new Date(0);
+    date.setSeconds(seconds);
+    return date.toISOString().substr(11, 8);
 }
 
-function displayTranscription(transcription) {
-    const transcriptionDiv = document.getElementById("transcription");
-    transcriptionDiv.innerHTML = "";
+function prepareDownload(segments) {
+    const downloadBtn = document.getElementById('download-btn');
+    downloadBtn.style.display = 'block';
 
-    transcription.segments.forEach((segment, index) => {
-        const segmentDiv = document.createElement("div");
-        segmentDiv.style.marginBottom = "10px";
-        segmentDiv.textContent = `${index + 1}. ${segment.text}`;
-        transcriptionDiv.appendChild(segmentDiv);
+    downloadBtn.addEventListener('click', () => {
+        const content = segments.map(segment => 
+            `דובר ${segment.id} [${formatTime(segment.start)} - ${formatTime(segment.end)}]:\n${segment.text}\n\n`
+        ).join('');
+        const blob = new Blob([content], { type: 'application/msword' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'תמלול.doc';
+        a.click();
     });
 }
