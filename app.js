@@ -1,88 +1,110 @@
-const fileInput = document.getElementById("fileInput");
-const uploadButton = document.getElementById("uploadButton");
-const statusDiv = document.getElementById("statusDiv");
-const outputDiv = document.getElementById("outputDiv");
-let apiKey = localStorage.getItem("runpodApiKey");
+const API_URL = "https://api.runpod.ai/v2/flsha1hfkp14sw/run";
+const STATUS_URL = "https://api.runpod.ai/v2/flsha1hfkp14sw/status";
+const apiKey = "הכנס-כאן-את-מפתח-ה-API-שלך";
 
-if (!apiKey) {
-    apiKey = prompt("הזן את הטוקן של RunPod:");
-    localStorage.setItem("runpodApiKey", apiKey);
-}
-
-async function uploadAndTranscribe(audioFile) {
-    const formData = new FormData();
-    formData.append("file", audioFile);
-    formData.append("type", "file");
-    formData.append("model", "ivrit-ai/faster-whisper-v2-d4");
-
-    try {
-        statusDiv.innerHTML = "שולח קובץ ל-RunPod...";
-        const response = await fetch("https://api.runpod.ai/v2/flsha1hfkp14sw/run", {
-            method: "POST",
-            headers: { "Authorization": `Bearer ${apiKey}` },
-            body: formData,
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error("שגיאה בבקשת POST:", errorText);
-            throw new Error("שגיאה בשליחת הקובץ: " + errorText);
-        }
-
-        const result = await response.json();
-        return result.id;
-    } catch (error) {
-        console.error("שגיאה:", error);
-        throw error;
-    }
-}
-
-async function checkJobStatus(jobId) {
-    let status = null;
-    while (status !== "COMPLETED") {
-        statusDiv.innerHTML = `בודק סטטוס לעבודה ${jobId}...`;
-        await new Promise((resolve) => setTimeout(resolve, 5000));
-
-        const response = await fetch(`https://api.runpod.ai/v2/flsha1hfkp14sw/status/${jobId}`, {
-            headers: { "Authorization": `Bearer ${apiKey}` },
-        });
-
-        if (!response.ok) {
-            console.error("שגיאה בבדיקת סטטוס:", await response.text());
-            throw new Error("שגיאה בבדיקת הסטטוס.");
-        }
-
-        const result = await response.json();
-        status = result.status;
-
-        if (status === "COMPLETED") {
-            return result.output;
-        }
-    }
-}
-
-function formatTranscript(output) {
-    return output.segments
-        .map((segment, index) => `סגמנט ${index + 1}:\n${segment.text}`)
-        .join("\n\n");
-}
-
-uploadButton.addEventListener("click", async () => {
-    const selectedFile = fileInput.files[0];
-    if (!selectedFile) {
-        statusDiv.innerHTML = "אנא בחר קובץ להעלאה.";
+document.getElementById("transcribeButton").addEventListener("click", async () => {
+    const fileInput = document.getElementById("audioInput");
+    const file = fileInput.files[0];
+    if (!file) {
+        alert("אנא בחר קובץ שמע.");
         return;
     }
 
-    try {
-        const jobId = await uploadAndTranscribe(selectedFile);
-        const result = await checkJobStatus(jobId);
-        const transcript = formatTranscript(result);
+    const statusElement = document.getElementById("status");
+    statusElement.textContent = "ממיר את הקובץ ל-Base64...";
 
-        statusDiv.innerHTML = "התמלול הושלם!";
-        outputDiv.innerHTML = `<pre>${transcript}</pre>`;
+    try {
+        const base64File = await convertToBase64(file);
+
+        statusElement.textContent = "שולח את הקובץ ל-API...";
+        const jobId = await uploadAndGetJobId(base64File);
+
+        statusElement.textContent = "מחכה לתוצאות...";
+        const transcription = await waitForResult(jobId);
+
+        statusElement.textContent = "התמלול הסתיים!";
+        displayTranscription(transcription);
     } catch (error) {
-        statusDiv.innerHTML = "שגיאה בתהליך התמלול. נסה שוב.";
-        console.error(error);
+        statusElement.textContent = "שגיאה: " + error.message;
     }
 });
+
+async function convertToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => {
+            const base64String = reader.result.split(",")[1];
+            resolve(base64String);
+        };
+        reader.onerror = (error) => reject(error);
+    });
+}
+
+async function uploadAndGetJobId(base64File) {
+    const payload = {
+        input: {
+            file: base64File,
+            type: "base64",
+            model: "ivrit-ai/faster-whisper-v2-d4",
+        },
+    };
+
+    const response = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "שגיאה בשליחת הקובץ ל-API");
+    }
+
+    const data = await response.json();
+    return data.id;
+}
+
+async function waitForResult(jobId) {
+    const pollingInterval = 5000; // בדיקה כל 5 שניות
+    const maxAttempts = 12; // עד 60 שניות
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        const response = await fetch(`${STATUS_URL}/${jobId}`, {
+            headers: {
+                Authorization: `Bearer ${apiKey}`,
+            },
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || "שגיאה בבדיקת סטטוס העבודה");
+        }
+
+        const data = await response.json();
+        if (data.status === "COMPLETED") {
+            return data.output.result;
+        } else if (data.status === "FAILED") {
+            throw new Error("העבודה נכשלה.");
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, pollingInterval));
+    }
+
+    throw new Error("העבודה לא הסתיימה בזמן. נסה שוב מאוחר יותר.");
+}
+
+function displayTranscription(transcription) {
+    const transcriptionDiv = document.getElementById("transcription");
+    transcriptionDiv.innerHTML = "";
+
+    transcription.segments.forEach((segment, index) => {
+        const segmentDiv = document.createElement("div");
+        segmentDiv.style.marginBottom = "10px";
+        segmentDiv.textContent = `${index + 1}. ${segment.text}`;
+        transcriptionDiv.appendChild(segmentDiv);
+    });
+}
