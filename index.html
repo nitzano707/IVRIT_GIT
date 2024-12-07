@@ -7,11 +7,13 @@
 </head>
 <body>
     <h1>אפליקציית תמלול קבצי שמע</h1>
-    <label for="fileInput">בחר קובץ שמע:</label>
-    <input type="file" id="fileInput" accept="audio/*">
-    <button id="uploadBtn">התחל</button>
+    <label for="audioFile">בחר קובץ שמע:</label>
+    <input type="file" id="audioFile" accept="audio/*">
+    <button id="uploadButton">התחל</button>
     <div id="status"></div>
     <div id="transcription"></div>
+    <button id="downloadButton" style="display: none;">הורד כתמלול</button>
+
+    <script src="app.js"></script>
 </body>
-<script src="app.js"></script>
 </html>
