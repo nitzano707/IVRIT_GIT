@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>אפליקציית תמלול קבצי שמע</title>
+    <title>אפליקציית תמלול קבצים</title>
 </head>
 <body>
     <h1>אפליקציית תמלול קבצי שמע</h1>
-    <label for="audioFile">בחר קובץ שמע:</label>
-    <input type="file" id="audioFile" accept="audio/*">
-    <button id="uploadButton">התחל</button>
-    <div id="status"></div>
-    <div id="transcription"></div>
-    <button id="downloadButton" style="display: none;">הורד כתמלול</button>
-
+    <div>
+        <label for="fileInput">בחר קובץ שמע:</label>
+        <input type="file" id="fileInput" accept="audio/*">
+        <button id="uploadButton">התחל</button>
+    </div>
+    <div id="statusDiv"></div>
+    <div id="outputDiv"></div>
     <script src="app.js"></script>
 </body>
 </html>
