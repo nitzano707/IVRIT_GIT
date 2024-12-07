@@ -33,16 +33,21 @@ async function waitForServerReady(apiKey) {
                 headers: { 'Authorization': `Bearer ${apiKey}` }
             });
 
-            const result = await response.json();
-
-            if (result.status === 'READY') {
-                statusDiv.innerHTML = 'השרת מוכן. מתחיל תהליך התמלול...';
-                return true; // השרת זמין
+            const textResponse = await response.text(); // נקרא את התגובה כטקסט
+            try {
+                const result = JSON.parse(textResponse); // ננסה לפענח את הטקסט כ-JSON
+                if (result.status === 'READY') {
+                    statusDiv.innerHTML = 'השרת מוכן. מתחיל תהליך התמלול...';
+                    return true; // השרת זמין
+                }
+                statusDiv.innerHTML = `סטטוס שרת: ${result.status}. בדיקה נוספת בעוד 5 שניות...`;
+            } catch (jsonError) {
+                console.error('תשובה לא צפויה מהשרת:', textResponse);
+                statusDiv.innerHTML = 'תשובה לא צפויה מהשרת. מנסה שוב...';
             }
-
-            statusDiv.innerHTML = `סטטוס שרת: ${result.status}. בדיקה נוספת בעוד 5 שניות...`;
         } catch (error) {
             console.warn('שגיאה בבדיקת זמינות השרת:', error);
+            statusDiv.innerHTML = 'שגיאה בבדיקת זמינות השרת. מנסה שוב...';
         }
 
         await new Promise((resolve) => setTimeout(resolve, 5000));
@@ -53,6 +58,8 @@ async function waitForServerReady(apiKey) {
     statusDiv.innerHTML = 'השרת אינו זמין כרגע. אנא נסה שוב במועד מאוחר יותר.';
     throw new Error('Server not ready');
 }
+
+
 
 // פונקציה לבדוק סטטוס עבודה
 async function checkJobStatus(jobId, apiKey) {
