@@ -37,6 +37,8 @@ async function splitAndUpload(audioFile) {
 
     const formData = new FormData();
     formData.append('file', audioFile);
+    formData.append('type', 'file'); // וודא שזה נדרש
+    formData.append('model', 'ivrit-ai/faster-whisper-v2-d4'); // דגם תמלול, למשל
 
     try {
         const response = await fetch('https://api.runpod.ai/v2/flsha1hfkp14sw/run', {
@@ -46,6 +48,8 @@ async function splitAndUpload(audioFile) {
         });
 
         if (!response.ok) {
+            const errorText = await response.text();
+            console.error('שגיאה בבקשת POST:', errorText);
             throw new Error('שגיאה בעת שליחת קובץ: ' + response.statusText);
         }
 
@@ -56,6 +60,7 @@ async function splitAndUpload(audioFile) {
         throw error;
     }
 }
+
 
 async function waitForJobReady(jobId, apiKey) {
     const maxAttempts = 12; // 12 בדיקות, אחת כל 5 שניות
