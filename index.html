@@ -3,20 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>אפליקציית תמלול</title>
+    <title>אפליקציית העלאה</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
-        <h1>אפליקציית תמלול קבצי שמע</h1>
-        <label for="audio-file">בחר קובץ שמע:</label>
-        <input type="file" id="audio-file" class="file-input" accept="audio/*">
-        <button id="transcribe-btn">העלה ותמלל</button>
-        <div class="spinner" id="spinner">מעבד את הקובץ... נא להמתין.</div>
-        <div class="status" id="status"></div>
-        <div class="transcription" id="transcription"></div>
+        <h1>העלאת קבצים ל-Cloudinary</h1>
+        <input type="file" id="file-input" />
+        <button id="upload-btn">העלה קובץ</button>
+        <div id="status"></div>
+        <div id="result"></div>
     </div>
-
     <script src="app.js"></script>
 </body>
 </html>
