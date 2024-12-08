@@ -1,6 +1,6 @@
 [build]
   functions = "netlify/functions"
-  publish = "." # התיקייה שבה נמצאים קובצי האתר שלך
+  publish = "." # אם הקבצים שלך נמצאים בתיקיית השורש
 
 [functions]
   node_bundler = "esbuild"
