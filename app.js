@@ -1,16 +1,16 @@
-// הקשב ללחיצה על כפתור "העלה קובץ"
 document.getElementById('upload-btn').addEventListener('click', async () => {
     const fileInput = document.getElementById('file-input');
     const statusDiv = document.getElementById('status');
     const resultDiv = document.getElementById('result');
 
-    // נקה את התוצאה הקודמת והראה הודעת מצב
+    // נקה את המצב הקודם
     statusDiv.textContent = 'מעלה את הקובץ...';
     resultDiv.textContent = '';
 
     // בדוק אם נבחר קובץ
     if (!fileInput.files[0]) {
         alert('אנא בחר קובץ להעלאה.');
+        console.error('No file selected for upload.');
         return;
     }
 
@@ -19,34 +19,36 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
     formData.append('file', file);
 
     try {
-        // שלח את הקובץ לפונקציה ב-Netlify
+        console.log('Sending file to server...');
+        // שליחת הקובץ לשרת
         const response = await fetch('/.netlify/functions/upload', {
             method: 'POST',
             body: formData,
         });
 
         if (response.ok) {
-            // קבל את התוצאה מהשרת
+            // קבלת תגובה מהשרת
             const data = await response.json();
-            statusDiv.textContent = 'הקובץ הועלה בהצלחה!';
-            resultDiv.innerHTML = `
-                <p>הקובץ הועלה בהצלחה!</p>
-                <p><a href="${data.url}" target="_blank">צפה בקובץ כאן</a></p>
-            `;
+            console.log('File uploaded successfully:', data.url);
 
-            // שלח את ה-URL של הקובץ לתמלול (שלב נוסף)
+            // הצגת קישור להורדת הקובץ
+            statusDiv.textContent = 'הקובץ הועלה בהצלחה!';
+            resultDiv.innerHTML = `<a href="${data.url}" target="_blank">צפה בקובץ כאן</a>`;
+
+            // המשך שליחה לתמלול
             await sendForTranscription(data.url, statusDiv, resultDiv);
         } else {
             const errorData = await response.json();
+            console.error('Error response from server:', errorData);
             statusDiv.textContent = `שגיאה: ${errorData.error}`;
         }
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error during upload:', error);
         statusDiv.textContent = 'שגיאה בהעלאת הקובץ.';
     }
 });
 
-// שלח את ה-URL לתמלול
+// שליחה ל-API לתמלול
 async function sendForTranscription(fileUrl, statusDiv, resultDiv) {
     statusDiv.textContent = 'שולח את הקובץ לתמלול...';
 
@@ -58,10 +60,11 @@ async function sendForTranscription(fileUrl, statusDiv, resultDiv) {
     };
 
     try {
+        console.log('Sending file for transcription...');
         const response = await fetch('https://api.runpod.ai/v2/flsha1hfkp14sw/run', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer YOUR_RUNPOD_API_KEY`, // החלף במפתח ה-API שלך
+                'Authorization': `Bearer YOUR_RUNPOD_API_KEY`, // החלף במפתח שלך
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(payload),
@@ -69,19 +72,23 @@ async function sendForTranscription(fileUrl, statusDiv, resultDiv) {
 
         if (response.ok) {
             const data = await response.json();
+            console.log('Transcription job started:', data.id);
+
+            // בדיקת סטטוס העבודה
             statusDiv.textContent = 'הקובץ נשלח לתמלול. ממתין לתוצאה...';
             await checkTranscriptionStatus(data.id, statusDiv, resultDiv);
         } else {
             const errorData = await response.json();
+            console.error('Error response from transcription API:', errorData);
             statusDiv.textContent = `שגיאה בשליחת הקובץ לתמלול: ${errorData.error}`;
         }
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error during transcription request:', error);
         statusDiv.textContent = 'שגיאה בשליחת הקובץ לתמלול.';
     }
 }
 
-// בדוק את סטטוס התמלול
+// בדיקת סטטוס של עבודת התמלול
 async function checkTranscriptionStatus(jobId, statusDiv, resultDiv) {
     let status = 'IN_QUEUE';
     let retryCount = 0;
@@ -89,6 +96,7 @@ async function checkTranscriptionStatus(jobId, statusDiv, resultDiv) {
 
     while (status === 'IN_QUEUE' || status === 'IN_PROGRESS') {
         try {
+            console.log(`Checking transcription status (attempt ${retryCount + 1})...`);
             const response = await fetch(`https://api.runpod.ai/v2/flsha1hfkp14sw/status/${jobId}`, {
                 method: 'GET',
                 headers: {
@@ -98,25 +106,28 @@ async function checkTranscriptionStatus(jobId, statusDiv, resultDiv) {
 
             const data = await response.json();
             status = data.status;
+            console.log(`Transcription status: ${status}`);
 
             if (status === 'COMPLETED') {
                 statusDiv.textContent = 'התמלול הושלם!';
                 displayTranscription(data.output.result.segments, resultDiv);
                 return;
             } else if (status === 'FAILED') {
+                console.error('Transcription job failed.');
                 statusDiv.textContent = 'שגיאה בתמלול. אנא נסה שוב.';
                 return;
             }
 
             statusDiv.textContent = `סטטוס: ${status}. ממתין...`;
         } catch (error) {
-            console.error('Error:', error);
+            console.error('Error checking transcription status:', error);
             statusDiv.textContent = 'שגיאה בבדיקת סטטוס התמלול.';
             return;
         }
 
         retryCount++;
         if (retryCount >= maxRetries) {
+            console.error('Max retries reached for transcription status.');
             statusDiv.textContent = 'לא הצלחנו להשלים את התמלול לאחר ניסיונות רבים.';
             return;
         }
@@ -125,7 +136,7 @@ async function checkTranscriptionStatus(jobId, statusDiv, resultDiv) {
     }
 }
 
-// הצג את התמלול
+// הצגת תוצאה של התמלול
 function displayTranscription(segments, resultDiv) {
     const transcriptionHtml = segments
         .map(
