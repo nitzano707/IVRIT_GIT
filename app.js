@@ -35,3 +35,4 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
         statusDiv.textContent = 'שגיאה בהעלאת הקובץ.';
     }
 });
+
