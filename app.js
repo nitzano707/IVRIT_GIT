@@ -22,9 +22,9 @@ document.getElementById('transcribe-btn').addEventListener('click', async () => 
         // שלב 1: העלאת קובץ לשרת האחסון
         statusDiv.innerHTML = 'מעלה את קובץ השמע לשרת האחסון הזמני...';
         const uploadResponse = await fetch('https://tempstoragenitzantry1.netlify.app/.netlify/functions/upload', {
-            method: 'POST',
-            body: formData
-        });
+    method: 'POST',
+    body: formData
+});
 
         const uploadData = await uploadResponse.json();
         if (!uploadData.url) {
