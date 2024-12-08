@@ -2,7 +2,7 @@ const fetch = require('node-fetch');
 const FormData = require('form-data');
 
 exports.handler = async (event) => {
-    // טיפול בבקשות OPTIONS
+    // טיפול בבקשות OPTIONS (Preflight)
     if (event.httpMethod === 'OPTIONS') {
         return {
             statusCode: 200,
@@ -27,36 +27,26 @@ exports.handler = async (event) => {
     }
 
     try {
-        const contentType = event.headers['content-type'];
-        if (!contentType || !contentType.startsWith('multipart/form-data')) {
-            return {
-                statusCode: 400,
-                headers: {
-                    'Access-Control-Allow-Origin': '*',
-                },
-                body: JSON.stringify({ error: 'Invalid Content-Type. Expected multipart/form-data.' }),
-            };
-        }
+        const boundary = event.headers['content-type'].split('boundary=')[1];
+        const bodyBuffer = Buffer.from(event.body, 'base64'); // Decode Base64 body
+        const parsedData = parseMultipartFormData(bodyBuffer, boundary);
 
-        const boundary = contentType.split('boundary=')[1];
-        const bodyBuffer = Buffer.from(event.body, 'base64'); // פענוח Base64
-        const formDataParts = parseMultipartFormData(bodyBuffer, boundary);
-
-        const file = formDataParts.files.file; // שדה הקובץ נקרא "file"
+        // השג את הקובץ מתוך הבקשה
+        const file = parsedData.files.file;
         if (!file) {
             return {
                 statusCode: 400,
                 headers: {
                     'Access-Control-Allow-Origin': '*',
                 },
-                body: JSON.stringify({ error: 'No file uploaded.' }),
+                body: JSON.stringify({ error: 'No file found in the request' }),
             };
         }
 
-        // יצירת FormData לשליחה ל-Cloudinary
+        // שלח את הקובץ ל-Cloudinary
         const formData = new FormData();
         formData.append('file', file.content, file.filename);
-        formData.append('upload_preset', 'ycxh1g5i'); // ה-Upload Preset שלך
+        formData.append('upload_preset', 'ycxh1g5i'); // Upload Preset שלך
 
         const cloudName = 'de1nxl62t'; // שם הענן שלך
         const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
@@ -65,6 +55,7 @@ exports.handler = async (event) => {
         });
 
         const cloudinaryResponse = await response.json();
+
         if (cloudinaryResponse.secure_url) {
             return {
                 statusCode: 200,
@@ -79,7 +70,7 @@ exports.handler = async (event) => {
                 headers: {
                     'Access-Control-Allow-Origin': '*',
                 },
-                body: JSON.stringify({ error: 'Failed to upload to Cloudinary.' }),
+                body: JSON.stringify({ error: 'Failed to upload to Cloudinary', details: cloudinaryResponse }),
             };
         }
     } catch (error) {
@@ -89,7 +80,7 @@ exports.handler = async (event) => {
             headers: {
                 'Access-Control-Allow-Origin': '*',
             },
-            body: JSON.stringify({ error: 'Internal Server Error.' }),
+            body: JSON.stringify({ error: 'Internal Server Error', details: error.message }),
         };
     }
 };
@@ -114,7 +105,7 @@ function parseMultipartFormData(body, boundary) {
             const contentType = headers.match(/Content-Type: (.+)/)[1];
             files[fieldName] = {
                 filename,
-                content: Buffer.from(content.trim(), 'utf8'),
+                content: Buffer.from(content.trim(), 'binary'),
                 contentType,
             };
         } else {
