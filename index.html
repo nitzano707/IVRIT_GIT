@@ -3,16 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>אפליקציית העלאה</title>
-    <link rel="stylesheet" href="style.css">
+    <title>העלאת קבצים ל-Cloudinary</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            direction: rtl;
+            text-align: right;
+            margin: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+        }
+        .status, .result {
+            margin-top: 20px;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <h1>העלאת קבצים ל-Cloudinary</h1>
-        <input type="file" id="file-input" />
+        <input type="file" id="file-input" accept="audio/*">
         <button id="upload-btn">העלה קובץ</button>
-        <div id="status"></div>
-        <div id="result"></div>
+        <div class="status" id="status"></div>
+        <div class="result" id="result"></div>
     </div>
     <script src="app.js"></script>
 </body>
