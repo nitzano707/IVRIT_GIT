@@ -20,8 +20,8 @@ document.getElementById('transcribe-btn').addEventListener('click', async () => 
 
     try {
         // שלב 1: העלאת קובץ לשרת האחסון
-        statusDiv.innerHTML = 'מעלה את קובץ השמע לשרת...';
-        const uploadResponse = await fetch('https://temporary-storage.netlify.app/.netlify/functions/upload', {
+        statusDiv.innerHTML = 'מעלה את קובץ השמע לשרת האחסון הזמני...';
+        const uploadResponse = await fetch('https://tempstoragenitzantry1.netlify.app/.netlify/functions/upload', {
             method: 'POST',
             body: formData
         });
@@ -64,71 +64,3 @@ document.getElementById('transcribe-btn').addEventListener('click', async () => 
         spinner.style.display = 'none';
     }
 });
-
-function getApiKey() {
-    let apiKey = localStorage.getItem('runpodApiKey');
-    if (!apiKey) {
-        apiKey = prompt('אנא הזן את מפתח ה-API שלך:');
-        if (apiKey) {
-            localStorage.setItem('runpodApiKey', apiKey);
-        }
-    }
-    return apiKey;
-}
-
-async function checkJobStatus(jobId) {
-    const statusDiv = document.getElementById('status');
-    const transcriptionDiv = document.getElementById('transcription');
-
-    let status = 'IN_QUEUE';
-    let retryCount = 0;
-    const maxRetries = 30;
-
-    while (status === 'IN_QUEUE' || status === 'IN_PROGRESS') {
-        try {
-            const response = await fetch(`https://api.runpod.ai/v2/flsha1hfkp14sw/status/${jobId}`, {
-                method: 'GET',
-                headers: { 'Authorization': `Bearer ${getApiKey()}` }
-            });
-            const data = await response.json();
-            status = data.status;
-
-            if (status === 'COMPLETED') {
-                statusDiv.innerHTML = 'העבודה הושלמה. מציג את התמלול...';
-                displayTranscription(data.output.result.segments);
-                return;
-            } else if (status === 'FAILED') {
-                statusDiv.innerHTML = 'העבודה נכשלה. אנא נסה שוב.';
-                return;
-            }
-
-            statusDiv.innerHTML = `סטטוס עבודה: ${status}. בודק שוב...`;
-        } catch (error) {
-            console.error('שגיאה בבדיקת מצב העבודה:', error);
-            statusDiv.innerHTML = 'שגיאה בבדיקת מצב העבודה.';
-            return;
-        }
-
-        retryCount++;
-        if (retryCount >= maxRetries) {
-            statusDiv.innerHTML = 'לא הצלחנו לקבל תוצאה לאחר ניסיונות רבים.';
-            return;
-        }
-
-        await new Promise(resolve => setTimeout(resolve, 5000));
-    }
-}
-
-function displayTranscription(segments) {
-    const transcriptionDiv = document.getElementById('transcription');
-    transcriptionDiv.innerHTML = '<h2>תמלול:</h2>';
-    segments.forEach(segment => {
-        transcriptionDiv.innerHTML += `<p>[${formatTime(segment.start)} - ${formatTime(segment.end)}]: ${segment.text}</p>`;
-    });
-}
-
-function formatTime(seconds) {
-    const date = new Date(0);
-    date.setSeconds(seconds);
-    return date.toISOString().substr(11, 8);
-}
