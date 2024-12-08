@@ -4,38 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>אפליקציית תמלול</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            direction: rtl;
-            text-align: right;
-        }
-        .container {
-            max-width: 600px;
-            margin: auto;
-        }
-        .file-input {
-            margin: 20px 0;
-        }
-        .spinner {
-            display: none;
-            margin-top: 20px;
-            font-size: 18px;
-            color: #555;
-        }
-        .status {
-            margin-top: 20px;
-            color: #555;
-        }
-        .transcription {
-            margin-top: 20px;
-        }
-        .download-btn {
-            display: none;
-            margin-top: 20px;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
@@ -46,7 +15,6 @@
         <div class="spinner" id="spinner">מעבד את הקובץ... נא להמתין.</div>
         <div class="status" id="status"></div>
         <div class="transcription" id="transcription"></div>
-        <button id="download-btn" class="download-btn">הורד תמלול</button>
     </div>
 
     <script src="app.js"></script>
