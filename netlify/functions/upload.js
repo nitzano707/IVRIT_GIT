@@ -1,8 +1,7 @@
-const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
-const FormData = require('form-data');
-
 exports.handler = async (event) => {
     console.log('Upload function triggered');
+    console.log('HTTP Method:', event.httpMethod);
+    console.log('Event body:', event.body);
 
     // טיפול בבקשות OPTIONS
     if (event.httpMethod === 'OPTIONS') {
@@ -17,30 +16,17 @@ exports.handler = async (event) => {
         };
     }
 
-    // טיפול בבקשות POST בלבד
-    if (event.httpMethod !== 'POST') {
-        return {
-            statusCode: 405,
-            headers: {
-                'Access-Control-Allow-Origin': '*',
-            },
-            body: JSON.stringify({ error: 'Method Not Allowed' }),
-        };
-    }
-
     try {
-        console.log('Processing POST request');
-        const formData = new FormData();
-
-        // הוסף קובץ וטען Preset ממשתני הסביבה
         const uploadPreset = process.env.UPLOAD_PRESET || 'audio_uploads';
-        formData.append('upload_preset', uploadPreset);
+        console.log('Using upload preset:', uploadPreset);
 
-        // ניתוח תוכן הבקשה
+        const formData = new FormData();
         formData.append('file', Buffer.from(event.body, 'base64'), {
             filename: 'uploaded_file',
         });
+        formData.append('upload_preset', uploadPreset);
 
+        console.log('Sending request to Cloudinary...');
         const response = await fetch(`${process.env.CLOUDINARY_URL}/auto/upload`, {
             method: 'POST',
             body: formData,
@@ -68,7 +54,7 @@ exports.handler = async (event) => {
             };
         }
     } catch (error) {
-        console.error('Error occurred:', error);
+        console.error('Error occurred in upload function:', error);
         return {
             statusCode: 500,
             headers: {
