@@ -1,10 +1,17 @@
 {
-  "name": "your-project-name",
+  "name": "audio-upload-app",
   "version": "1.0.0",
+  "description": "App to upload audio files to Cloudinary and transcribe them",
   "main": "index.js",
-  "license": "MIT",
+  "scripts": {
+    "start": "netlify dev",
+    "build": "netlify build",
+    "deploy": "netlify deploy"
+  },
   "dependencies": {
     "node-fetch": "^3.3.2",
     "form-data": "^4.0.0"
-  }
+  },
+  "devDependencies": {},
+  "license": "MIT"
 }
