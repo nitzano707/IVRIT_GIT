@@ -1,6 +1,6 @@
 [build]
   functions = "netlify/functions"
-  publish = "dist"
+  publish = "." # התיקייה שבה נמצאים קובצי האתר שלך
 
 [functions]
   node_bundler = "esbuild"
