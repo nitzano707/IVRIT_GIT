@@ -1,16 +1,13 @@
-document.getElementById('transcribe-btn').addEventListener('click', async () => {
-    const fileInput = document.getElementById('audio-file');
+document.getElementById('upload-btn').addEventListener('click', async () => {
+    const fileInput = document.getElementById('file-input');
     const statusDiv = document.getElementById('status');
-    const transcriptionDiv = document.getElementById('transcription');
-    const spinner = document.getElementById('spinner');
+    const resultDiv = document.getElementById('result');
 
-    statusDiv.innerHTML = '';
-    transcriptionDiv.innerHTML = '';
-    spinner.style.display = 'block';
+    statusDiv.textContent = 'מעלה את הקובץ...';
+    resultDiv.textContent = '';
 
     if (!fileInput.files[0]) {
-        alert('אנא בחר קובץ שמע.');
-        spinner.style.display = 'none';
+        alert('אנא בחר קובץ להעלאה.');
         return;
     }
 
@@ -19,48 +16,21 @@ document.getElementById('transcribe-btn').addEventListener('click', async () => 
     formData.append('file', file);
 
     try {
-        // שלב 1: העלאת קובץ לשרת האחסון
-        statusDiv.innerHTML = 'מעלה את קובץ השמע לשרת האחסון הזמני...';
-        const uploadResponse = await fetch('https://tempstoragenitzantry1.netlify.app/.netlify/functions/upload', {
-    method: 'POST',
-    body: formData
-});
-
-        const uploadData = await uploadResponse.json();
-        if (!uploadData.url) {
-            throw new Error('שגיאה ביצירת URL לקובץ.');
-        }
-
-        const audioUrl = uploadData.url;
-        console.log('URL לקובץ:', audioUrl);
-
-        // שלב 2: שליחת URL לתמלול
-        statusDiv.innerHTML = 'שולח בקשת תמלול...';
-        const transcriptionResponse = await fetch('https://api.runpod.ai/v2/flsha1hfkp14sw/run', {
+        const response = await fetch('/.netlify/functions/upload', {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${getApiKey()}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                input: { type: 'url', url: audioUrl }
-            })
+            body: formData,
         });
 
-        const transcriptionData = await transcriptionResponse.json();
-        if (!transcriptionData.id) {
-            throw new Error('שגיאה בקבלת מזהה עבודה.');
+        if (response.ok) {
+            const data = await response.json();
+            statusDiv.textContent = 'הקובץ הועלה בהצלחה!';
+            resultDiv.innerHTML = `<a href="${data.url}" target="_blank">צפה בקובץ כאן</a>`;
+        } else {
+            const errorData = await response.json();
+            statusDiv.textContent = `שגיאה: ${errorData.error}`;
         }
-
-        console.log('מזהה עבודה:', transcriptionData.id);
-        statusDiv.innerHTML = 'ממתין לסיום העבודה...';
-
-        await checkJobStatus(transcriptionData.id);
-
     } catch (error) {
-        console.error('שגיאה:', error);
-        statusDiv.innerHTML = 'שגיאה: ' + error.message;
-    } finally {
-        spinner.style.display = 'none';
+        console.error('Error:', error);
+        statusDiv.textContent = 'שגיאה בהעלאת הקובץ.';
     }
 });
