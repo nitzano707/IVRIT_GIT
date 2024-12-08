@@ -1,9 +1,10 @@
+const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
+const FormData = require('form-data');
+
 exports.handler = async (event) => {
     console.log('Upload function triggered');
     console.log('HTTP Method:', event.httpMethod);
-    console.log('Event body:', event.body);
 
-    // טיפול בבקשות OPTIONS
     if (event.httpMethod === 'OPTIONS') {
         return {
             statusCode: 200,
@@ -20,14 +21,17 @@ exports.handler = async (event) => {
         const uploadPreset = process.env.UPLOAD_PRESET || 'audio_uploads';
         console.log('Using upload preset:', uploadPreset);
 
+        // ניתוח הנתונים שהתקבלו
+        const body = JSON.parse(event.body);
+        const fileBuffer = Buffer.from(body.file, 'base64');
+        const filename = body.filename || 'uploaded_file.mp3';
+
         const formData = new FormData();
-        formData.append('file', Buffer.from(event.body, 'base64'), {
-            filename: 'uploaded_file',
-        });
+        formData.append('file', fileBuffer, filename);
         formData.append('upload_preset', uploadPreset);
 
         console.log('Sending request to Cloudinary...');
-        const response = await fetch(`${process.env.CLOUDINARY_URL}/auto/upload`, {
+        const response = await fetch(`https://api.cloudinary.com/v1_1/${process.env.CLOUD_NAME}/auto/upload`, {
             method: 'POST',
             body: formData,
         });
